@@ -1,6 +1,6 @@
 # Sovereign Swarm - Multi-Tone Video Captioner
 
-A sleek, premium Streamlit application that processes short video clips (under 30 seconds), extracts keyframes, and uses Fireworks AI model endpoints to generate captions in multiple distinct styles (Formal, Sarcastic, Humorous Tech, and Everyday Humor).
+A sleek, premium Streamlit application that processes video clips (between 30 seconds and 2 minutes), extracts keyframes, and uses Fireworks AI model endpoints to generate captions in multiple distinct styles (Formal, Sarcastic, Humorous Tech, and Everyday Humor).
 
 [![Live App](https://img.shields.io/badge/Live-Streamlit%20Cloud-FF4B4B?style=for-the-badge&logo=Streamlit)](https://sovereign-swarm.streamlit.app/)
 

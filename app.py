@@ -546,9 +546,9 @@ if uploaded_file is not None:
     if metadata:
         duration = metadata["duration"]
         
-        # Check duration limit (under 30s)
-        if duration > 30.0:
-            st.error(f"❌ Video is too long ({duration:.1f}s). Please upload a video under 30 seconds.")
+        # Check duration limit (30s to 2 min)
+        if duration < 30.0 or duration > 120.0:
+            st.error(f"❌ Video duration is {duration:.1f}s. Please upload a video between 30 seconds and 2 minutes.")
             os.remove(temp_filepath)
         else:
             # Show file metadata & video preview

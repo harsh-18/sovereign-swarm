@@ -6,6 +6,22 @@ import os
 import json
 from openai import OpenAI
 
+# Load local .env file manually if it exists
+if os.path.exists(".env"):
+    try:
+        with open(".env", "r") as f:
+            for line in f:
+                if line.strip() and not line.strip().startswith("#"):
+                    parts = line.strip().split("=", 1)
+                    if len(parts) == 2:
+                        k, v = parts[0].strip(), parts[1].strip()
+                        # Strip optional surrounding quotes from key/value
+                        if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+                            v = v[1:-1]
+                        os.environ[k] = v
+    except Exception:
+        pass
+
 # Page config
 st.set_page_config(
     page_title="Multi-Tone Caption Generator",

@@ -24,7 +24,7 @@ if os.path.exists(".env"):
 
 # Page config
 st.set_page_config(
-    page_title="Multi-Tone Caption Generator",
+    page_title="Sovereign Swarm",
     page_icon="🎬",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -169,7 +169,7 @@ st.markdown("""
 # Hero Header
 st.markdown("""
     <div class="hero-container">
-        <div class="hero-title">🎬 Multi-Tone Video Captioner</div>
+        <div class="hero-title">🎬 Sovereign Swarm</div>
         <div class="hero-subtitle">Transform your short clips into engaging, AI-generated captions across multiple styles and personalities.</div>
     </div>
 """, unsafe_allow_html=True)

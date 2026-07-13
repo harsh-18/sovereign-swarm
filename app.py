@@ -15,7 +15,7 @@ if os.path.exists(".env"):
                     parts = line.strip().split("=", 1)
                     if len(parts) == 2:
                         k, v = parts[0].strip(), parts[1].strip()
-                        # Strip optional surrounding quotes from key/value
+                        # Strip optional surrounding quotes
                         if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
                             v = v[1:-1]
                         os.environ[k] = v
@@ -203,7 +203,6 @@ api_key = user_key.strip() if user_key.strip() else default_key
 client = None
 models_list = []
 api_key_valid = False
-key_error_message = ""
 
 # Validate the API Key and fetch available models dynamically
 if api_key:
@@ -217,8 +216,8 @@ if api_key:
         models_list = [m.id for m in models_data.data]
         client = temp_client
         api_key_valid = True
-    except Exception as e:
-        key_error_message = str(e)
+    except Exception:
+        pass
 
 # Inform user if validation failed or key is missing
 if not api_key:
@@ -230,36 +229,40 @@ elif not api_key_valid:
     else:
         st.error("❌ The host's background API key credits are exhausted or the key is invalid. Please bring your own API key and paste it in the sidebar section.")
 
-# Filter models dynamically based on the fetched list
-vision_models = []
-text_models = []
+# Dynamic model selection configuration
+vision_model = ""
+text_model = ""
 
 if api_key_valid and models_list:
-    # 1. Filter Vision Models
-    # Include models containing: vision, vl, gemma-4, molmo, internvl, step-3-7-flash
-    vision_keywords = ["vision", "vl", "gemma-4", "molmo", "internvl", "step-3-7-flash"]
-    vision_models = [m for m in models_list if any(kw in m.lower() for kw in vision_keywords)]
+    # 1. Vision Models
+    # Include models containing: vision, vl, gemma-4, molmo, internvl, step-3-7-flash, kimi-k2
+    vision_keywords = ["vision", "vl", "gemma-4", "molmo", "internvl", "step-3-7-flash", "kimi-k2"]
+    vision_raw_list = [m for m in models_list if any(kw in m.lower() for kw in vision_keywords)]
     
-    # Sort: Recommended (Gemma 4 31b) first, then others
+    # Sort: Recommended (Gemma 4 31b or Kimi K2.6) first
     def sort_vision_key(model_id):
         m_lower = model_id.lower()
         if "gemma-4-31b-it" in m_lower:
             return (0, model_id)
         if "gemma-4-26b-a4b-it" in m_lower:
             return (1, model_id)
-        if "gemma-4" in m_lower:
+        if "kimi-k2p6" in m_lower or "kimi-k2.6" in m_lower:
             return (2, model_id)
-        if "llama-v3p2-11b-vision" in m_lower:
+        if "gemma-4" in m_lower:
             return (3, model_id)
-        return (4, model_id)
-    vision_models = sorted(vision_models, key=sort_vision_key)
+        if "llama-v3p2-11b-vision" in m_lower:
+            return (4, model_id)
+        return (5, model_id)
+    vision_raw_list = sorted(vision_raw_list, key=sort_vision_key)
+    
+    # Map clean short display name -> full model path
+    vision_options = {m.split("/")[-1]: m for m in vision_raw_list}
 
-    # 2. Filter Text Models
-    # Exclude embeddings, rerankers, and vision-only architectures
-    exclude_keywords = ["embed", "rerank", "vector", "vl", "vision", "molmo", "internvl", "image"]
-    # Allow latest models from user list (llama 3.3, gemma 4, deepseek, qwen 3.7, kimi, glm)
-    text_keywords = ["llama", "gemma", "deepseek", "qwen", "kimi", "glm"]
-    text_models = [
+    # 2. Text Models
+    # Exclude embeddings, rerankers, and image generators
+    exclude_keywords = ["embed", "rerank", "vector", "flux", "schnell", "dev"]
+    text_keywords = ["llama", "gemma", "deepseek", "qwen", "kimi", "glm", "gpt-oss"]
+    text_raw_list = [
         m for m in models_list 
         if any(kw in m.lower() for kw in text_keywords) 
         and not any(ex in m.lower() for ex in exclude_keywords)
@@ -268,48 +271,66 @@ if api_key_valid and models_list:
     # Sort: Recommended first
     def sort_text_key(model_id):
         m_lower = model_id.lower()
-        if "llama-v3p3-70b-instruct" in m_lower:
-            return (0, model_id)
-        if "gemma-4-31b-it" in m_lower:
-            return (1, model_id)
         if "deepseek-v4-pro" in m_lower:
+            return (0, model_id)
+        if "glm-5p2" in m_lower:
+            return (1, model_id)
+        if "llama-v3p3-70b-instruct" in m_lower:
             return (2, model_id)
-        if "qwen3p7-plus" in m_lower:
+        if "gemma-4-31b-it" in m_lower:
             return (3, model_id)
         return (4, model_id)
-    text_models = sorted(text_models, key=sort_text_key)
+    text_raw_list = sorted(text_raw_list, key=sort_text_key)
+    
+    # Map clean short display name -> full model path
+    text_options = {m.split("/")[-1]: m for m in text_raw_list}
 
-# Fallbacks if API key is invalid/missing (shown as placeholders or fallback selections)
-fallback_vision_models = [
-    "accounts/fireworks/models/gemma-4-31b-it",
-    "accounts/fireworks/models/gemma-4-26b-a4b-it",
-    "accounts/fireworks/models/llama-v3p2-11b-vision-instruct",
-    "accounts/fireworks/models/qwen2-5-vl-72b-instruct"
-]
-
-fallback_text_models = [
-    "accounts/fireworks/models/llama-v3p3-70b-instruct",
-    "accounts/fireworks/models/gemma-4-31b-it",
-    "accounts/fireworks/models/deepseek-v4-pro",
-    "accounts/fireworks/models/qwen3p7-plus"
-]
-
-display_vision_models = vision_models if (api_key_valid and vision_models) else fallback_vision_models
-display_text_models = text_models if (api_key_valid and text_models) else fallback_text_models
-
-# Dropdown options in Sidebar
-st.sidebar.markdown("### 🧠 Model Selection")
-vision_model = st.sidebar.selectbox(
-    "Vision Model (Frame Description)",
-    options=display_vision_models,
-    help="Select a model dynamically loaded from your API key to perform frame-by-frame analysis."
-)
-
-text_model = st.sidebar.selectbox(
-    "Text Model (Caption Generation)",
-    options=display_text_models,
-    help="Select a text model dynamically loaded from your API key to write structured captions."
-)
+    st.sidebar.markdown("### 🧠 Model Selection")
+    
+    if vision_options:
+        selected_vision = st.sidebar.selectbox(
+            "Vision Model (Frame Description)",
+            options=list(vision_options.keys()),
+            help="Select one of the vision models supported by your API key."
+        )
+        vision_model = vision_options[selected_vision]
+    else:
+        st.sidebar.selectbox(
+            "Vision Model (Frame Description)",
+            options=["No vision models found"],
+            disabled=True
+        )
+        vision_model = ""
+        
+    if text_options:
+        selected_text = st.sidebar.selectbox(
+            "Text Model (Caption Generation)",
+            options=list(text_options.keys()),
+            help="Select one of the text models supported by your API key."
+        )
+        text_model = text_options[selected_text]
+    else:
+        st.sidebar.selectbox(
+            "Text Model (Caption Generation)",
+            options=["No text models found"],
+            disabled=True
+        )
+        text_model = ""
+else:
+    # Empty display selection state
+    st.sidebar.markdown("### 🧠 Model Selection")
+    st.sidebar.selectbox(
+        "Vision Model (Frame Description)",
+        options=["Choose your model..."],
+        disabled=True
+    )
+    st.sidebar.selectbox(
+        "Text Model (Caption Generation)",
+        options=["Choose your model..."],
+        disabled=True
+    )
+    vision_model = ""
+    text_model = ""
 
 st.sidebar.markdown("---")
 
@@ -364,6 +385,151 @@ def encode_image_base64(image_rgb):
     if not ret:
         raise ValueError("Failed to encode image to JPEG")
     return base64.b64encode(jpeg_buffer).decode('utf-8')
+
+# Isolated Caption Generation Execution Function
+def run_caption_generation(client, vision_model, text_model, base64_frames):
+    try:
+        # Step 1: Vision Model Frame Analysis
+        with st.spinner(f"🧠 Step 1: {vision_model.split('/')[-1]} is analyzing the keyframes..."):
+            prompt_content = [
+                {
+                    "type": "text",
+                    "text": (
+                        "These are 3 sequential keyframes extracted from a short video. "
+                        "Please provide a clear and detailed description of the scene, what is happening, "
+                        "the subjects involved, the setting, and the progression of action from frame 1 to frame 3."
+                    )
+                }
+            ]
+            for base64_str in base64_frames:
+                prompt_content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{base64_str}"
+                    }
+                })
+            
+            vision_response = client.chat.completions.create(
+                model=vision_model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt_content
+                    }
+                ],
+                max_tokens=600
+            )
+            raw_description = vision_response.choices[0].message.content
+        
+        st.success("✅ Frame analysis completed!")
+        
+        with st.expander("🔍 View Raw Description from Vision Model"):
+            st.write(raw_description)
+
+        # Step 2: Text Model Multi-tone Captioning
+        with st.spinner(f"✍️ Step 2: {text_model.split('/')[-1]} is generating structured captions..."):
+            system_prompt = (
+                "You are a professional social media manager and copywriter. Your goal is to write captions "
+                "based on video descriptions. You always respond with a valid JSON object matching the exact schema requested."
+            )
+            user_prompt = f"""
+            Based on the following description of a video sequence:
+            
+            ---
+            {raw_description}
+            ---
+            
+            Generate four distinct video captions in these exact tones:
+            1. "Formal": Professional, corporate, clean, and informative. Great for LinkedIn.
+            2. "Sarcastic": Dry, humorous, slightly cynical, mocking the situation. Great for Reddit/Twitter.
+            3. "Humorous Tech": A joke/reference catered to developers, computer scientists, or IT workers using concepts like code, bugs, stackoverflow, compiler errors, APIs, or AI.
+            4. "Everyday Humor": Relatable, lighthearted, observational situational comedy. Great for TikTok or Instagram.
+            
+            You MUST return a JSON object with EXACTLY the following structure:
+            {{
+                "Formal": "Your formal caption here.",
+                "Sarcastic": "Your sarcastic caption here.",
+                "Humorous Tech": "Your tech humor caption here.",
+                "Everyday Humor": "Your everyday humor caption here."
+            }}
+            
+            Ensure you output ONLY the raw JSON object. Do not include markdown codeblocks or explanation.
+            """
+            
+            text_response = client.chat.completions.create(
+                model=text_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.75,
+                max_tokens=600
+            )
+            
+            raw_json_str = text_response.choices[0].message.content
+            
+            # Clean up potential Markdown block wrappers
+            cleaned_json_str = raw_json_str.strip()
+            if cleaned_json_str.startswith("```json"):
+                cleaned_json_str = cleaned_json_str[7:]
+            elif cleaned_json_str.startswith("```"):
+                cleaned_json_str = cleaned_json_str[3:]
+            if cleaned_json_str.endswith("```"):
+                cleaned_json_str = cleaned_json_str[:-3]
+            cleaned_json_str = cleaned_json_str.strip()
+            
+            captions_dict = json.loads(cleaned_json_str)
+
+        st.success("✅ Multi-tone captions generated successfully!")
+
+        # UI Rendering
+        st.markdown("## 💬 Generated Captions")
+        tab_formal, tab_sarcastic, tab_tech, tab_everyday = st.tabs([
+            "👔 Formal", 
+            "😏 Sarcastic", 
+            "💻 Humorous Tech", 
+            "😂 Everyday Humor"
+        ])
+        
+        with tab_formal:
+            st.markdown(f"""
+                <div class="caption-box caption-box-formal">
+                    <div class="caption-title">👔 Formal Caption</div>
+                    <div class="caption-text">{captions_dict.get('Formal', 'N/A')}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with tab_sarcastic:
+            st.markdown(f"""
+                <div class="caption-box caption-box-sarcastic">
+                    <div class="caption-title">😏 Sarcastic Caption</div>
+                    <div class="caption-text">{captions_dict.get('Sarcastic', 'N/A')}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with tab_tech:
+            st.markdown(f"""
+                <div class="caption-box caption-box-tech">
+                    <div class="caption-title">💻 Humorous Tech Caption</div>
+                    <div class="caption-text">{captions_dict.get('Humorous Tech', 'N/A')}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with tab_everyday:
+            st.markdown(f"""
+                <div class="caption-box caption-box-everyday">
+                    <div class="caption-title">😂 Everyday Humor Caption</div>
+                    <div class="caption-text">{captions_dict.get('Everyday Humor', 'N/A')}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("### 🛠️ Raw Output Data")
+        st.json(captions_dict)
+
+    except Exception as e:
+        st.error(f"Error during API execution: {str(e)}")
+        st.info("Check that your API key is correct and has active credits to run the selected models.")
 
 # Main workflow UI
 uploaded_file = st.file_uploader("Upload an MP4 Video File", type=["mp4"])
@@ -428,151 +594,12 @@ if uploaded_file is not None:
             
             # Caption Generation
             if api_key_valid and client and len(base64_frames) == 3 and 'generate_btn' in locals() and generate_btn:
-                try:
-                    with st.spinner(f"🧠 Step 1: {vision_model.split('/')[-1]} is analyzing the keyframes..."):
-                        # Step 1: Vision Model
-                        prompt_content = [
-                            {
-                                "type": "text",
-                                "text": (
-                                    "These are 3 sequential keyframes extracted from a short video. "
-                                    "Please provide a clear and detailed description of the scene, what is happening, "
-                                    "the subjects involved, the setting, and the progression of action from frame 1 to frame 3."
-                                )
-                            }
-                        ]
-                        for base64_str in base64_frames:
-                            prompt_content.append({
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_str}"
-                                }
-                            })
-                        
-                        # Calling vision model
-                        vision_response = client.chat.completions.create(
-                            model=vision_model,
-                            messages=[
-                                {
-                                    "role": "user",
-                                    "content": prompt_content
-                                }
-                            ],
-                            max_tokens=600
-                        )
-                        raw_description = vision_response.choices[0].message.content
-                    
-                    st.success("✅ Frame analysis completed!")
-                    
-                    with st.expander("🔍 View Raw Description from Vision Model"):
-                        st.write(raw_description)
-
-                    with st.spinner(f"✍️ Step 2: {text_model.split('/')[-1]} is generating structured captions..."):
-                        # Step 2: Text Model for Multi-tone Structured JSON
-                        system_prompt = (
-                            "You are a professional social media manager and copywriter. Your goal is to write captions "
-                            "based on video descriptions. You always respond with a valid JSON object matching the exact schema requested."
-                        )
-                        user_prompt = f"""
-                        Based on the following description of a video sequence:
-                        
-                        ---
-                        {raw_description}
-                        ---
-                        
-                        Generate four distinct video captions in these exact tones:
-                        1. "Formal": Professional, corporate, clean, and informative. Great for LinkedIn.
-                        2. "Sarcastic": Dry, humorous, slightly cynical, mocking the situation. Great for Reddit/Twitter.
-                        3. "Humorous Tech": A joke/reference catered to developers, computer scientists, or IT workers using concepts like code, bugs, stackoverflow, compiler errors, APIs, or AI.
-                        4. "Everyday Humor": Relatable, lighthearted, observational situational comedy. Great for TikTok or Instagram.
-                        
-                        You MUST return a JSON object with EXACTLY the following structure:
-                        {{
-                            "Formal": "Your formal caption here.",
-                            "Sarcastic": "Your sarcastic caption here.",
-                            "Humorous Tech": "Your tech humor caption here.",
-                            "Everyday Humor": "Your everyday humor caption here."
-                        }}
-                        
-                        Ensure you output ONLY the raw JSON object. Do not include markdown codeblocks or explanation.
-                        """
-                        
-                        text_response = client.chat.completions.create(
-                            model=text_model,
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": user_prompt}
-                            ],
-                            response_format={"type": "json_object"},
-                            temperature=0.75,
-                            max_tokens=600
-                        )
-                        
-                        raw_json_str = text_response.choices[0].message.content
-                        
-                        # Clean up Markdown block wrappers if the model generated them despite instructions
-                        cleaned_json_str = raw_json_str.strip()
-                        if cleaned_json_str.startswith("```json"):
-                            cleaned_json_str = cleaned_json_str[7:]
-                        elif cleaned_json_str.startswith("```"):
-                            cleaned_json_str = cleaned_json_str[3:]
-                        if cleaned_json_str.endswith("```"):
-                            cleaned_json_str = cleaned_json_str[:-3]
-                        cleaned_json_str = cleaned_json_str.strip()
-                        
-                        captions_dict = json.loads(cleaned_json_str)
-
-                    st.success("✅ Multi-tone captions generated successfully!")
-
-                    # Beautiful presentation
-                    st.markdown("## 💬 Generated Captions")
-                    
-                    tab_formal, tab_sarcastic, tab_tech, tab_everyday = st.tabs([
-                        "👔 Formal", 
-                        "😏 Sarcastic", 
-                        "💻 Humorous Tech", 
-                        "😂 Everyday Humor"
-                    ])
-                    
-                    with tab_formal:
-                        st.markdown(f"""
-                            <div class="caption-box caption-box-formal">
-                                <div class="caption-title">👔 Formal Caption</div>
-                                <div class="caption-text">{captions_dict.get('Formal', 'N/A')}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                    with tab_sarcastic:
-                        st.markdown(f"""
-                            <div class="caption-box caption-box-sarcastic">
-                                <div class="caption-title">😏 Sarcastic Caption</div>
-                                <div class="caption-text">{captions_dict.get('Sarcastic', 'N/A')}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                    with tab_tech:
-                        st.markdown(f"""
-                            <div class="caption-box caption-box-tech">
-                                <div class="caption-title">💻 Humorous Tech Caption</div>
-                                <div class="caption-text">{captions_dict.get('Humorous Tech', 'N/A')}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                    with tab_everyday:
-                        st.markdown(f"""
-                            <div class="caption-box caption-box-everyday">
-                                <div class="caption-title">😂 Everyday Humor Caption</div>
-                                <div class="caption-text">{captions_dict.get('Everyday Humor', 'N/A')}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-
-                    # Show raw JSON
-                    st.markdown("### 🛠️ Raw Output Data")
-                    st.json(captions_dict)
-
-                except Exception as e:
-                    st.error(f"Error during API execution: {str(e)}")
-                    st.info("Check that your API key is correct and has active credits to run the selected models.")
+                if not vision_model:
+                    st.error("❌ No vision model available or selected. Frame analysis cannot proceed.")
+                elif not text_model:
+                    st.error("❌ No text model available or selected. Caption generation cannot proceed.")
+                else:
+                    run_caption_generation(client, vision_model, text_model, base64_frames)
 
             # Clean up temp file
             os.remove(temp_filepath)

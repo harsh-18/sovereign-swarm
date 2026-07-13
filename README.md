@@ -2,6 +2,12 @@
 
 A sleek, premium Streamlit application that processes short video clips (under 30 seconds), extracts keyframes, and uses Fireworks AI model endpoints to generate captions in multiple distinct styles (Formal, Sarcastic, Humorous Tech, and Everyday Humor).
 
+[![Live App](https://img.shields.io/badge/Live-Streamlit%20Cloud-FF4B4B?style=for-the-badge&logo=Streamlit)](https://sovereign-swarm.streamlit.app/)
+
+## 📸 App Interface
+
+![Sovereign Swarm Dashboard](assets/sovereign_dashboard.png)
+
 ## 📹 Video Demonstration
 
 Check out the [Sovereign Swarm Video Demonstration](https://www.loom.com/share/1612cd0560dc4de7b960b3255160a443) to see the app in action!

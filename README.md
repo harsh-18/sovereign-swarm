@@ -6,15 +6,14 @@ A sleek, premium Streamlit application that processes short video clips (under 3
 
 - **High-Quality UI:** Built with custom dark styling, CSS-based cards for frame previews, and modern tabs for exploring different caption tones.
 - **Auto Frame Extraction:** Uses OpenCV to extract exactly three evenly spaced frames (at 25%, 50%, and 75% progression) from the video.
-- **Fireworks AI Vision Model:** Utilizes `llama-v3p2-11b-vision-instruct` to process the extracted frames and generate a detailed scene-by-scene description.
-- **Fireworks AI Text Model:** Leverages `llama-v3-70b-instruct` to convert raw descriptions into a structured JSON payload containing 4 specialized caption tones.
-- **Local API Config:** Easily configure your Fireworks AI API Key dynamically via the sidebar or load it from environment variables.
+- **Dynamic Model Selection:** Choose from the latest frontier models including Google **Gemma 4 31B IT**, **Gemma 4 26B A4B IT**, Llama 3.3, Qwen 2.5 VL, or input any custom model ID.
+- **Secure API Configuration:** Uses your default API key if configured, but lets other users override it with their own key in the sidebar if credits run out.
 
 ---
 
-## 🛠️ Installation
+## 🛠️ Installation & Local Usage
 
-Ensure you have Python 3.8+ installed. Then, follow these steps:
+Ensure you have Python 3.8+ installed.
 
 1. **Clone the Repository:**
    ```bash
@@ -27,29 +26,28 @@ Ensure you have Python 3.8+ installed. Then, follow these steps:
    pip install streamlit opencv-python openai
    ```
 
----
-
-## ⚡ Quick Start
-
-1. **Run the Streamlit Application:**
+3. **Run Streamlit Locally:**
    ```bash
    streamlit run app.py
    ```
 
-2. **Access in Browser:**
-   Open [http://localhost:8501](http://localhost:8501) in your browser.
+---
 
-3. **Configure API Key:**
-   - Enter your Fireworks AI API Key in the sidebar input, **OR**
-   - Export it in your environment:
-     ```bash
-     export FIREWORKS_API_KEY="your_api_key_here"
-     ```
+## ☁️ Deployment (Streamlit Community Cloud)
 
-4. **Upload and Caption:**
-   - Upload an MP4 video clip under 30 seconds.
-   - Review metadata and extracted keyframes.
-   - Click **Generate Multi-Tone Captions** to see the results.
+You can easily deploy this app for free on [Streamlit Community Cloud](https://share.streamlit.io):
+
+1. Go to [share.streamlit.io](https://share.streamlit.io) and log in with your GitHub account.
+2. Click **New app**.
+3. Select your repository `sovereign-swarm`, branch `main`, and main file path `app.py`.
+4. Click **Advanced settings...** to add your secrets.
+5. In the **Secrets** text area, paste your default Fireworks API key:
+   ```toml
+   FIREWORKS_API_KEY = "your_fireworks_api_key_here"
+   ```
+6. Click **Save** and then **Deploy!**
+
+This allows the app to be powered by your API key by default. If your credits run out, users can simply paste their own keys in the sidebar input box to continue using it.
 
 ---
 

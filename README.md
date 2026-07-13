@@ -63,7 +63,7 @@ This allows the app to be powered by your API key by default. If your credits ru
 ## 📊 Presentation
 
 A widescreen slide deck summarizing the vision, system architecture, key features, and deployment steps of the project is available:
-- Download the PowerPoint deck: [Sovereign_Swarm.pptx](Sovereign_Swarm.pptx)
+- Download the PowerPoint deck: [Sovereign_Swarm_v2.pptx](Sovereign_Swarm_v2.pptx)
 
 ---
 

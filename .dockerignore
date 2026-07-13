@@ -1,0 +1,10 @@
+# Ignored directories and files
+.git
+.github
+.env
+__pycache__/
+*.pyc
+.streamlit/
+*.pptx
+*.mp4
+*.log

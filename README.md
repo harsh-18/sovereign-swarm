@@ -65,6 +65,17 @@ This allows the app to be powered by your API key by default. If your credits ru
 A widescreen slide deck summarizing the vision, system architecture, key features, and deployment steps of the project is available:
 - Download the PowerPoint deck: [Sovereign_Swarm.pptx](Sovereign_Swarm.pptx)
 
+## 🐳 Docker Image
+
+Sovereign Swarm is packaged as a Docker container and published automatically to the GitHub Container Registry (GHCR):
+- **Docker Image Reference:** `ghcr.io/harsh-18/sovereign-swarm:latest`
+
+To run the containerized application locally:
+```bash
+docker pull ghcr.io/harsh-18/sovereign-swarm:latest
+docker run -p 8501:8501 -e FIREWORKS_API_KEY="your_api_key_here" ghcr.io/harsh-18/sovereign-swarm:latest
+```
+
 ---
 
 ## 📄 License

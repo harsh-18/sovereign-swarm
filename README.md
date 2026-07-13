@@ -60,6 +60,11 @@ You can easily deploy this app for free on [Streamlit Community Cloud](https://s
 
 This allows the app to be powered by your API key by default. If your credits run out, users can simply paste their own keys in the sidebar input box to continue using it.
 
+## 📊 Presentation
+
+A widescreen slide deck summarizing the vision, system architecture, key features, and deployment steps of the project is available:
+- Download the PowerPoint deck: [Sovereign_Swarm.pptx](Sovereign_Swarm.pptx)
+
 ---
 
 ## 📄 License
